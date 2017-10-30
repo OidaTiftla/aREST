@@ -153,6 +153,7 @@ public:
     void removeLastChar() {
 
         index = index - 1;
+        buffer[index] = 0;
 
     }
 
