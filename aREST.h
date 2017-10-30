@@ -135,6 +135,141 @@
 #endif
 #endif
 
+// Memory debug
+#if defined(ESP8266)
+int freeMemory;
+#endif
+
+template<int SIZE>
+class Buffer {
+
+public:
+
+    uint16_t size() {
+        return index;
+    }
+
+// Remove last char from buffer
+    void removeLastChar() {
+
+        index = index - 1;
+
+    }
+
+// Add to output buffer
+    void add(char *toAdd) {
+
+        if (DEBUG_MODE) {
+#if defined(ESP8266)
+            Serial.print("Memory loss:");
+            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+            freeMemory = ESP.getFreeHeap();
+#endif
+            Serial.print(F("Added to buffer as char: "));
+            Serial.println(toAdd);
+        }
+
+        for (int i = 0; i < strlen(toAdd); i++) {
+            buffer[index + i] = toAdd[i];
+        }
+        index = index + strlen(toAdd);
+    }
+
+// Add to output buffer
+#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H) || defined(ESP32)
+
+    void add(String toAdd) {
+
+        if (DEBUG_MODE) {
+#if defined(ESP8266)
+            Serial.print("Memory loss:");
+            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+            freeMemory = ESP.getFreeHeap();
+#endif
+            Serial.print(F("Added to buffer as String: "));
+            Serial.println(toAdd);
+        }
+
+        for (int i = 0; i < toAdd.length(); i++) {
+            buffer[index + i] = toAdd[i];
+        }
+        index = index + toAdd.length();
+    }
+
+#endif
+
+// Add to output buffer
+    void add(uint16_t toAdd) {
+
+        char number[10];
+        itoa(toAdd, number, 10);
+
+        add(number);
+    }
+
+// Add to output buffer
+    void add(int toAdd) {
+
+        char number[10];
+        itoa(toAdd, number, 10);
+
+        add(number);
+    }
+
+// Add to output buffer (Mega & ESP only)
+#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H)
+
+    void add(float toAdd) {
+
+        char number[10];
+        dtostrf(toAdd, 5, 2, number);
+
+        add(number);
+    }
+
+#endif
+
+// Add to output buffer
+    void add(const __FlashStringHelper *toAdd) {
+
+        if (DEBUG_MODE) {
+#if defined(ESP8266)
+            Serial.print("Memory loss:");
+            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+            freeMemory = ESP.getFreeHeap();
+#endif
+            Serial.print(F("Added to buffer as progmem: "));
+            Serial.println(toAdd);
+        }
+
+        uint8_t idx = 0;
+
+        PGM_P p = reinterpret_cast<PGM_P>(toAdd);
+
+        while (1) {
+            unsigned char c = pgm_read_byte(p++);
+            if (c == 0) break;
+            buffer[index + idx] = c;
+            idx++;
+        }
+        index = index + idx;
+    }
+
+    char *getBuffer() {
+        return buffer;
+    }
+
+    void resetBuffer() {
+        memset(&buffer[0], 0, sizeof(buffer));
+        // free(buffer);
+    }
+
+private:
+    char buffer[SIZE];
+    uint16_t index;
+
+};
+
 class aREST {
 
 public:
@@ -304,7 +439,7 @@ public:
 // Send HTTP headers for Ethernet & WiFi
     void send_http_headers() {
 
-        addToBuffer(
+        out_buffer.add(
                 F("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, PUT, OPTIONS\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n"));
 
     }
@@ -326,8 +461,7 @@ public:
         state = 'u';
         arguments = "";
 
-        index = 0;
-        //memset(&buffer[0], 0, sizeof(buffer));
+        out_buffer.resetBuffer();
 
         if (DEBUG_MODE) {
 #if defined(ESP8266)
@@ -1101,7 +1235,7 @@ public:
             Serial.print(F("State: "));
             Serial.println(state);
             Serial.print(F("State of buffer at the start: "));
-            Serial.println(buffer);
+            Serial.println(out_buffer.getBuffer());
         }
 
         // Start of message
@@ -1112,8 +1246,8 @@ public:
 
             // Send feedback to client
             if (!LIGHTWEIGHT) {
-                addToBuffer(F("{\"message\": \"Pin D"));
-                addToBuffer(message_pin);
+                out_buffer.add(F("{\"message\": \"Pin D"));
+                out_buffer.add(message_pin);
             }
 
             // Input
@@ -1123,7 +1257,7 @@ public:
                 pinMode(pin, INPUT);
 
                 // Send feedback to client
-                if (!LIGHTWEIGHT) { addToBuffer(F(" set to input\", ")); }
+                if (!LIGHTWEIGHT) { out_buffer.add(F(" set to input\", ")); }
             }
 
             // Input with pullup
@@ -1133,7 +1267,7 @@ public:
                 pinMode(pin, INPUT_PULLUP);
 
                 // Send feedback to client
-                if (!LIGHTWEIGHT) { addToBuffer(F(" set to input with pullup\", ")); }
+                if (!LIGHTWEIGHT) { out_buffer.add(F(" set to input with pullup\", ")); }
             }
 
             // Output
@@ -1143,7 +1277,7 @@ public:
                 pinMode(pin, OUTPUT);
 
                 // Send feedback to client
-                if (!LIGHTWEIGHT) { addToBuffer(F(" set to output\", ")); }
+                if (!LIGHTWEIGHT) { out_buffer.add(F(" set to output\", ")); }
             }
 
         }
@@ -1156,17 +1290,17 @@ public:
                 value = digitalRead(pin);
 
                 // Send answer
-                if (LIGHTWEIGHT) { addToBuffer(value); }
+                if (LIGHTWEIGHT) { out_buffer.add(value); }
                 else {
-                    addToBuffer(F("{\"return_value\": "));
-                    addToBuffer(value);
-                    addToBuffer(F(", "));
+                    out_buffer.add(F("{\"return_value\": "));
+                    out_buffer.add(value);
+                    out_buffer.add(F(", "));
                 }
             }
 
 #if !defined(__AVR_ATmega32U4__) || !defined(ADAFRUIT_CC3000_H)
             if (state == 'a') {
-                if (!LIGHTWEIGHT) { addToBuffer(F("{")); }
+                if (!LIGHTWEIGHT) { out_buffer.add(F("{")); }
 
                 for (uint8_t i = 0; i < NUMBER_DIGITAL_PINS; i++) {
 
@@ -1175,14 +1309,14 @@ public:
 
                     // Send feedback to client
                     if (LIGHTWEIGHT) {
-                        addToBuffer(value);
-                        addToBuffer(F(","));
+                        out_buffer.add(value);
+                        out_buffer.add(F(","));
                     } else {
-                        addToBuffer(F("\"D"));
-                        addToBuffer(i);
-                        addToBuffer(F("\": "));
-                        addToBuffer(value);
-                        addToBuffer(F(", "));
+                        out_buffer.add(F("\"D"));
+                        out_buffer.add(i);
+                        out_buffer.add(F("\": "));
+                        out_buffer.add(value);
+                        out_buffer.add(F(", "));
                     }
                 }
             }
@@ -1200,11 +1334,11 @@ public:
 
                 // Send feedback to client
                 if (!LIGHTWEIGHT) {
-                    addToBuffer(F("{\"message\": \"Pin D"));
-                    addToBuffer(message_pin);
-                    addToBuffer(F(" set to "));
-                    addToBuffer(value);
-                    addToBuffer(F("\", "));
+                    out_buffer.add(F("{\"message\": \"Pin D"));
+                    out_buffer.add(message_pin);
+                    out_buffer.add(F(" set to "));
+                    out_buffer.add(value);
+                    out_buffer.add(F("\", "));
                 }
             }
         }
@@ -1217,16 +1351,16 @@ public:
                 value = analogRead(pin);
 
                 // Send feedback to client
-                if (LIGHTWEIGHT) { addToBuffer(value); }
+                if (LIGHTWEIGHT) { out_buffer.add(value); }
                 else {
-                    addToBuffer(F("{\"return_value\": "));
-                    addToBuffer(value);
-                    addToBuffer(F(", "));
+                    out_buffer.add(F("{\"return_value\": "));
+                    out_buffer.add(value);
+                    out_buffer.add(F(", "));
                 }
             }
 #if !defined(__AVR_ATmega32U4__)
             if (state == 'a') {
-                if (!LIGHTWEIGHT) { addToBuffer(F("{")); }
+                if (!LIGHTWEIGHT) { out_buffer.add(F("{")); }
 
                 for (uint8_t i = 0; i < NUMBER_ANALOG_PINS; i++) {
 
@@ -1235,14 +1369,14 @@ public:
 
                     // Send feedback to client
                     if (LIGHTWEIGHT) {
-                        addToBuffer(value);
-                        addToBuffer(F(","));
+                        out_buffer.add(value);
+                        out_buffer.add(F(","));
                     } else {
-                        addToBuffer(F("\"A"));
-                        addToBuffer(i);
-                        addToBuffer(F("\": "));
-                        addToBuffer(value);
-                        addToBuffer(F(", "));
+                        out_buffer.add(F("\"A"));
+                        out_buffer.add(i);
+                        out_buffer.add(F("\": "));
+                        out_buffer.add(value);
+                        out_buffer.add(F(", "));
                     }
                 }
             }
@@ -1255,11 +1389,11 @@ public:
 #endif
 
                 // Send feedback to client
-                addToBuffer(F("{\"message\": \"Pin D"));
-                addToBuffer(message_pin);
-                addToBuffer(F(" set to "));
-                addToBuffer(value);
-                addToBuffer(F("\", "));
+                out_buffer.add(F("{\"message\": \"Pin D"));
+                out_buffer.add(message_pin);
+                out_buffer.add(F(" set to "));
+                out_buffer.add(value);
+                out_buffer.add(F("\", "));
 
             }
         }
@@ -1268,13 +1402,13 @@ public:
         if (command == 'v') {
 
             // Send feedback to client
-            if (LIGHTWEIGHT) { addToBuffer(*int_variables[value]); }
+            if (LIGHTWEIGHT) { out_buffer.add(*int_variables[value]); }
             else {
-                addToBuffer(F("{\""));
-                addToBuffer(int_variables_names[value]);
-                addToBuffer(F("\": "));
-                addToBuffer(*int_variables[value]);
-                addToBuffer(F(", "));
+                out_buffer.add(F("{\""));
+                out_buffer.add(int_variables_names[value]);
+                out_buffer.add(F("\": "));
+                out_buffer.add(*int_variables[value]);
+                out_buffer.add(F(", "));
             }
         }
 
@@ -1283,13 +1417,13 @@ public:
         if (command == 'l') {
 
             // Send feedback to client
-            if (LIGHTWEIGHT) { addToBuffer(*float_variables[value]); }
+            if (LIGHTWEIGHT) { out_buffer.add(*float_variables[value]); }
             else {
-                addToBuffer(F("{\""));
-                addToBuffer(float_variables_names[value]);
-                addToBuffer(F("\": "));
-                addToBuffer(*float_variables[value]);
-                addToBuffer(F(", "));
+                out_buffer.add(F("{\""));
+                out_buffer.add(float_variables_names[value]);
+                out_buffer.add(F("\": "));
+                out_buffer.add(*float_variables[value]);
+                out_buffer.add(F(", "));
             }
         }
 #endif
@@ -1299,13 +1433,13 @@ public:
         if (command == 's') {
 
             // Send feedback to client
-            if (LIGHTWEIGHT) { addToBuffer(*string_variables[value]); }
+            if (LIGHTWEIGHT) { out_buffer.add(*string_variables[value]); }
             else {
-                addToBuffer(F("{\""));
-                addToBuffer(string_variables_names[value]);
-                addToBuffer(F("\": \""));
-                addToBuffer(*string_variables[value]);
-                addToBuffer(F("\", "));
+                out_buffer.add(F("{\""));
+                out_buffer.add(string_variables_names[value]);
+                out_buffer.add(F("\": \""));
+                out_buffer.add(*string_variables[value]);
+                out_buffer.add(F("\", "));
             }
         }
 #endif
@@ -1318,12 +1452,12 @@ public:
 
             // Send feedback to client
             if (!LIGHTWEIGHT) {
-                addToBuffer(F("{\"return_value\": "));
-                addToBuffer(result);
-                addToBuffer(F(", "));
-                //addToBuffer(F(", \"message\": \""));
-                //addToBuffer(functions_names[value]);
-                //addToBuffer(F(" executed\", "));
+                out_buffer.add(F("{\"return_value\": "));
+                out_buffer.add(result);
+                out_buffer.add(F(", "));
+                //out_buffer.add(F(", \"message\": \""));
+                //out_buffer.add(functions_names[value]);
+                //out_buffer.add(F(" executed\", "));
             }
         }
 
@@ -1332,25 +1466,25 @@ public:
         }
 
         if (command == 'i') {
-            if (LIGHTWEIGHT) { addToBuffer(id); }
+            if (LIGHTWEIGHT) { out_buffer.add(id); }
             else {
-                addToBuffer(F("{"));
+                out_buffer.add(F("{"));
             }
         }
 
         // End of message
         if (LIGHTWEIGHT) {
-            addToBuffer(F("\r\n"));
+            out_buffer.add(F("\r\n"));
         } else {
 
             if (command != 'r' && command != 'u') {
-                addToBuffer(F("\"id\": \""));
-                addToBuffer(id);
-                addToBuffer(F("\", \"name\": \""));
-                addToBuffer(name);
-                addToBuffer(F("\", \"hardware\": \""));
-                addToBuffer(HARDWARE);
-                addToBuffer(F("\", \"connected\": true}\r\n"));
+                out_buffer.add(F("\"id\": \""));
+                out_buffer.add(id);
+                out_buffer.add(F("\", \"name\": \""));
+                out_buffer.add(name);
+                out_buffer.add(F("\", \"hardware\": \""));
+                out_buffer.add(HARDWARE);
+                out_buffer.add(F("\", \"connected\": true}\r\n"));
             }
         }
 
@@ -1361,7 +1495,7 @@ public:
             freeMemory = ESP.getFreeHeap();
 #endif
             Serial.print(F("State of buffer at the end: "));
-            Serial.println(buffer);
+            Serial.println(out_buffer.getBuffer());
         }
 
         // End here
@@ -1373,60 +1507,60 @@ public:
 #if defined(ADAFRUIT_CC3000_H) || defined(ESP8266) || defined(ethernet_h) || defined(WiFi_h)
 #if !defined(PubSubClient_h)
         if (command != 'u') {
-          addToBuffer(F("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, PUT, OPTIONS\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n"));
+          out_buffer.add(F("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, PUT, OPTIONS\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n"));
         }
 #endif
 #endif
 
-        if (LIGHTWEIGHT) { addToBuffer(id); }
+        if (LIGHTWEIGHT) { out_buffer.add(id); }
         else {
 
             // Start
-            addToBuffer(F("{\"variables\": {"));
+            out_buffer.add(F("{\"variables\": {"));
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H)
 
             // Int variables
             if (variables_index == 0 && string_variables_index == 0 && float_variables_index == 0) {
-                addToBuffer(F(" }, "));
+                out_buffer.add(F(" }, "));
             } else {
 
                 if (variables_index > 0) {
 
                     for (uint8_t i = 0; i < variables_index; i++) {
-                        addToBuffer(F("\""));
-                        addToBuffer(int_variables_names[i]);
-                        addToBuffer(F("\": "));
-                        addToBuffer(*int_variables[i]);
-                        addToBuffer(F(", "));
+                        out_buffer.add(F("\""));
+                        out_buffer.add(int_variables_names[i]);
+                        out_buffer.add(F("\": "));
+                        out_buffer.add(*int_variables[i]);
+                        out_buffer.add(F(", "));
                     }
 
                 }
                 if (string_variables_index > 0) {
 
                     for (uint8_t i = 0; i < string_variables_index; i++) {
-                        addToBuffer(F("\""));
-                        addToBuffer(string_variables_names[i]);
-                        addToBuffer(F("\": \""));
-                        addToBuffer(*string_variables[i]);
-                        addToBuffer(F("\", "));
+                        out_buffer.add(F("\""));
+                        out_buffer.add(string_variables_names[i]);
+                        out_buffer.add(F("\": \""));
+                        out_buffer.add(*string_variables[i]);
+                        out_buffer.add(F("\", "));
                     }
 
                 }
                 if (float_variables_index > 0) {
 
                     for (uint8_t i = 0; i < float_variables_index; i++) {
-                        addToBuffer(F("\""));
-                        addToBuffer(float_variables_names[i]);
-                        addToBuffer(F("\": "));
-                        addToBuffer(*float_variables[i]);
-                        addToBuffer(F(", "));
+                        out_buffer.add(F("\""));
+                        out_buffer.add(float_variables_names[i]);
+                        out_buffer.add(F("\": "));
+                        out_buffer.add(*float_variables[i]);
+                        out_buffer.add(F(", "));
                     }
 
                 }
-                removeLastBufferChar();
-                removeLastBufferChar();
-                addToBuffer(F("}, "));
+                out_buffer.removeLastChar();
+                out_buffer.removeLastChar();
+                out_buffer.add(F("}, "));
 
             }
 #else
@@ -1434,39 +1568,39 @@ public:
             if (variables_index > 0){
 
               for (uint8_t i = 0; i < variables_index-1; i++){
-                addToBuffer(F("\""));
-                addToBuffer(int_variables_names[i]);
-                addToBuffer(F("\": "));
-                addToBuffer(*int_variables[i]);
-                addToBuffer(F(", "));
+                out_buffer.add(F("\""));
+                out_buffer.add(int_variables_names[i]);
+                out_buffer.add(F("\": "));
+                out_buffer.add(*int_variables[i]);
+                out_buffer.add(F(", "));
               }
 
               // End
-              addToBuffer(F("\""));
-              addToBuffer(int_variables_names[variables_index-1]);
-              addToBuffer(F("\": "));
-              addToBuffer(*int_variables[variables_index-1]);
-              addToBuffer(F("}, "));
+              out_buffer.add(F("\""));
+              out_buffer.add(int_variables_names[variables_index-1]);
+              out_buffer.add(F("\": "));
+              out_buffer.add(*int_variables[variables_index-1]);
+              out_buffer.add(F("}, "));
             }
             else {
-              addToBuffer(F(" }, "));
+              out_buffer.add(F(" }, "));
             }
 #endif
 
         }
 
         // End
-        addToBuffer(F("\"id\": \""));
-        addToBuffer(id);
-        addToBuffer(F("\", \"name\": \""));
-        addToBuffer(name);
-        addToBuffer(F("\", \"hardware\": \""));
-        addToBuffer(HARDWARE);
+        out_buffer.add(F("\"id\": \""));
+        out_buffer.add(id);
+        out_buffer.add(F("\", \"name\": \""));
+        out_buffer.add(name);
+        out_buffer.add(F("\", \"hardware\": \""));
+        out_buffer.add(HARDWARE);
 
 #if defined(PubSubClient_h)
-        addToBuffer(F("\", \"connected\": true}"));
+        out_buffer.add(F("\", \"connected\": true}"));
 #else
-        addToBuffer(F("\", \"connected\": true}\r\n"));
+        out_buffer.add(F("\", \"connected\": true}\r\n"));
 #endif
 
     }
@@ -1625,112 +1759,6 @@ public:
         set_id(id);
     }
 
-// Remove last char from buffer
-    void removeLastBufferChar() {
-
-        index = index - 1;
-
-    }
-
-// Add to output buffer
-    void addToBuffer(char *toAdd) {
-
-        if (DEBUG_MODE) {
-#if defined(ESP8266)
-            Serial.print("Memory loss:");
-            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
-            freeMemory = ESP.getFreeHeap();
-#endif
-            Serial.print(F("Added to buffer as char: "));
-            Serial.println(toAdd);
-        }
-
-        for (int i = 0; i < strlen(toAdd); i++) {
-            buffer[index + i] = toAdd[i];
-        }
-        index = index + strlen(toAdd);
-    }
-
-// Add to output buffer
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H) || defined(ESP32)
-
-    void addToBuffer(String toAdd) {
-
-        if (DEBUG_MODE) {
-#if defined(ESP8266)
-            Serial.print("Memory loss:");
-            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
-            freeMemory = ESP.getFreeHeap();
-#endif
-            Serial.print(F("Added to buffer as String: "));
-            Serial.println(toAdd);
-        }
-
-        for (int i = 0; i < toAdd.length(); i++) {
-            buffer[index + i] = toAdd[i];
-        }
-        index = index + toAdd.length();
-    }
-
-#endif
-
-// Add to output buffer
-    void addToBuffer(uint16_t toAdd) {
-
-        char number[10];
-        itoa(toAdd, number, 10);
-
-        addToBuffer(number);
-    }
-
-// Add to output buffer
-    void addToBuffer(int toAdd) {
-
-        char number[10];
-        itoa(toAdd, number, 10);
-
-        addToBuffer(number);
-    }
-
-// Add to output buffer (Mega & ESP only)
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H)
-
-    void addToBuffer(float toAdd) {
-
-        char number[10];
-        dtostrf(toAdd, 5, 2, number);
-
-        addToBuffer(number);
-    }
-
-#endif
-
-// Add to output buffer
-    void addToBuffer(const __FlashStringHelper *toAdd) {
-
-        if (DEBUG_MODE) {
-#if defined(ESP8266)
-            Serial.print("Memory loss:");
-            Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
-            freeMemory = ESP.getFreeHeap();
-#endif
-            Serial.print(F("Added to buffer as progmem: "));
-            Serial.println(toAdd);
-        }
-
-        uint8_t idx = 0;
-
-        PGM_P p = reinterpret_cast<PGM_P>(toAdd);
-
-        while (1) {
-            unsigned char c = pgm_read_byte(p++);
-            if (c == 0) break;
-            buffer[index + idx] = c;
-            idx++;
-        }
-        index = index + idx;
-    }
-
     template<typename T>
     void sendBuffer(T &client, uint8_t chunkSize, uint8_t wait_time) {
 
@@ -1741,24 +1769,24 @@ public:
             freeMemory = ESP.getFreeHeap();
 #endif
             Serial.print(F("Buffer size: "));
-            Serial.println(index);
+            Serial.println(out_buffer.size());
         }
 
         // Send all of it
         if (chunkSize == 0) {
-            client.print(buffer);
+            client.print(out_buffer.getBuffer());
         }
 
             // Send chunk by chunk
         else {
 
             // Max iteration
-            uint8_t max_iteration = (int) (index / chunkSize) + 1;
+            uint8_t max_iteration = (int) (out_buffer.size() / chunkSize) + 1;
 
             // Send data
             for (uint8_t i = 0; i < max_iteration; i++) {
                 char intermediate_buffer[chunkSize + 1];
-                memcpy(intermediate_buffer, buffer + i * chunkSize, chunkSize);
+                memcpy(intermediate_buffer, out_buffer.getBuffer() + i * chunkSize, chunkSize);
                 intermediate_buffer[chunkSize] = '\0';
 
                 // Send intermediate buffer
@@ -1785,7 +1813,7 @@ public:
             freeMemory = ESP.getFreeHeap();
 #endif
             Serial.print(F("Buffer size: "));
-            Serial.println(index);
+            Serial.println(out_buffer.size());
         }
 
         // Reset the buffer
@@ -1798,19 +1826,16 @@ public:
             freeMemory = ESP.getFreeHeap();
 #endif
             Serial.print(F("Buffer size: "));
-            Serial.println(index);
+            Serial.println(out_buffer.size());
         }
     }
 
     char *getBuffer() {
-        return buffer;
+        return out_buffer.getBuffer();
     }
 
     void resetBuffer() {
-
-        memset(&buffer[0], 0, sizeof(buffer));
-        // free(buffer);
-
+        out_buffer.resetBuffer();
     }
 
     uint8_t esp_12_pin_map(uint8_t pin) {
@@ -1902,8 +1927,7 @@ private:
     String arguments;
 
     // Output uffer
-    char buffer[OUTPUT_BUFFER_SIZE];
-    uint16_t index;
+    Buffer<OUTPUT_BUFFER_SIZE> out_buffer;
 
     // Status LED
     uint8_t status_led_pin;
@@ -1955,11 +1979,6 @@ private:
     int (*functions[NUMBER_FUNCTIONS])(String);
 
     char *functions_names[NUMBER_FUNCTIONS];
-
-    // Memory debug
-#if defined(ESP8266)
-    int freeMemory;
-#endif
 
 };
 
