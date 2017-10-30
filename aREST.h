@@ -273,6 +273,7 @@ public:
     }
 
     void resetBuffer() {
+        index = 0;
         memset(&buffer[0], 0, sizeof(buffer));
         // free(buffer);
     }
