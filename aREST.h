@@ -135,6 +135,15 @@
 #endif
 #endif
 
+// Default number of max. exposed variables
+#ifndef NUMBER_ONEWIRE_BUSSES
+#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(CORE_WILDFIRE) || defined(ESP8266) || defined(ESP32) || !defined(ADAFRUIT_CC3000_H)
+#define NUMBER_ONEWIRE_BUSSES 10
+#else
+#define NUMBER_ONEWIRE_BUSSES 5
+#endif
+#endif
+
 class aREST {
 
 public:
@@ -271,6 +280,19 @@ public:
       // Build client ID
       String clientId = randomId + String(proKey);
       strcpy(client_id, clientId.c_str());
+
+    }
+
+#endif
+
+#if defined(OneWire_h)
+
+    void setup_onewire_for_pin(uint8_t pin){
+
+        if (NUMBER_ONEWIRE_BUSSES > onewire_busses_index){
+            onewire_busses[onewire_busses_index] = OneWire(pin);
+            onewire_busses_index++;
+        }
 
     }
 
@@ -1960,6 +1982,12 @@ private:
 #if defined(ESP8266)
     int freeMemory;
 #endif
+
+#if defined(OneWire_h)
+    uint8_t onewire_busses_index;
+    OneWire onewire_busses[NUMBER_ONEWIRE_BUSSES];
+#endif
+
 
 };
 
