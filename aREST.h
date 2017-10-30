@@ -135,6 +135,15 @@
 #endif
 #endif
 
+// Default number of max. exposed controllers
+#ifndef NUMBER_CONTROLLERS
+#if defined(__AVR_ATmega1280__) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(CORE_WILDFIRE) || defined(ESP8266)
+#define NUMBER_CONTROLLERS 10
+#else
+#define NUMBER_CONTROLLERS 5
+#endif
+#endif
+
 // Memory debug
 #if defined(ESP8266)
 int freeMemory;
@@ -174,6 +183,7 @@ public:
             buffer[index + i] = toAdd[i];
         }
         index = index + strlen(toAdd);
+        buffer[index] = 0;
     }
 
 // Add to output buffer
@@ -195,6 +205,7 @@ public:
             buffer[index + i] = toAdd[i];
         }
         index = index + toAdd.length();
+        buffer[index] = 0;
     }
 
 #endif
@@ -254,6 +265,7 @@ public:
             idx++;
         }
         index = index + idx;
+        buffer[index] = 0;
     }
 
     char *getBuffer() {
@@ -992,9 +1004,23 @@ public:
 #endif
 
     void process(char c) {
+        if (c == '\r'
+            || c == '\n') {
+            answer = answer.substring(0, answer.length() - 1);
+        }
 
         // Check if we are receveing useful data and process it
-        if ((c == '/' || c == '\r') && state == 'u') {
+        if ((c == '\r'
+             || c == '\n'
+             || answer.startsWith("GET /digital/")
+             || answer.startsWith("GET /digital ")
+             || answer.startsWith("GET /mode/")
+             || answer.startsWith("GET /mode ")
+             || answer.startsWith("GET /analog/")
+             || answer.startsWith("GET /analog ")
+             || answer.endsWith(" HTTP/")
+             || ((command == 'd' || command == 'm' || command == 'a') && c == '/')
+            ) && state == 'u') {
 
             if (DEBUG_MODE) {
                 // #if defined(ESP8266)
@@ -1093,6 +1119,10 @@ public:
 
             }
 
+            if (answer.startsWith("GET /")) {
+                answer = answer.substring(5, answer.length()); // 5 = length of "GET /"
+            }
+
             // Digital command received ?
             if (answer.startsWith("digital")) { command = 'd'; }
 
@@ -1109,7 +1139,7 @@ public:
 
             }
 
-            // Variable or function request received ?
+            // Variable, function or controller request received ?
             if (command == 'u') {
 
                 // Check if variable name is in int array
@@ -1179,6 +1209,26 @@ public:
                                 footer_start -= 6; // length of " HTTP/"
                             arguments = answer.substring(header_length + 8, footer_start);
                         }
+                    }
+                }
+
+                // Check if controller name is in array
+                for (uint8_t i = 0; i < controllers_index; i++) {
+                    if (answer.startsWith(controllers_names[i])) {
+
+                        // End here
+                        pin_selected = true;
+                        state = 'x';
+
+                        // Set state
+                        command = 'c';
+                        value = i;
+
+                        // Get command
+                        uint8_t footer_start = answer.length();
+                        if (answer.endsWith(" HTTP/"))
+                            footer_start -= 6; // length of " HTTP/"
+                        arguments = "/" + answer.substring(0, footer_start);
                     }
                 }
 
@@ -1462,6 +1512,16 @@ public:
             }
         }
 
+        // Controller selected
+        if (command == 'c') {
+
+            // Execute controller
+            String result = controllers[value](arguments);
+
+            // Send feedback to client
+            out_buffer.add(result);
+        }
+
         if (command == 'r' || command == 'u') {
             root_answer();
         }
@@ -1478,7 +1538,7 @@ public:
             out_buffer.add(F("\r\n"));
         } else {
 
-            if (command != 'r' && command != 'u') {
+            if (command != 'r' && command != 'u' && command != 'c') {
                 out_buffer.add(F("\"id\": \""));
                 out_buffer.add(id);
                 out_buffer.add(F("\", \"name\": \""));
@@ -1486,6 +1546,8 @@ public:
                 out_buffer.add(F("\", \"hardware\": \""));
                 out_buffer.add(HARDWARE);
                 out_buffer.add(F("\", \"connected\": true}\r\n"));
+            } else if (command == 'c') {
+                out_buffer.add(F("\r\n"));
             }
         }
 
@@ -1645,6 +1707,14 @@ public:
         functions_names[functions_index] = function_name;
         functions[functions_index] = f;
         functions_index++;
+    }
+
+
+    void controller(char *controller_name, String (*f)(String)) {
+
+        controllers_names[controllers_index] = controller_name;
+        controllers[controllers_index] = f;
+        controllers_index++;
     }
 
 // Set device ID
@@ -1980,6 +2050,13 @@ private:
     int (*functions[NUMBER_FUNCTIONS])(String);
 
     char *functions_names[NUMBER_FUNCTIONS];
+
+    // Controllers array
+    uint8_t controllers_index;
+
+    String (*controllers[NUMBER_CONTROLLERS])(String);
+
+    char *controllers_names[NUMBER_CONTROLLERS];
 
 };
 
