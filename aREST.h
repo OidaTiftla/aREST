@@ -149,6 +149,9 @@
 int freeMemory;
 #endif
 
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#define MAX(a, b) (((a)>(b))?(a):(b))
+
 template<int SIZE>
 class Buffer {
 
@@ -161,8 +164,10 @@ public:
 // Remove last char from buffer
     void removeLastChar() {
 
-        index = index - 1;
-        buffer[index] = 0;
+        if (index > 0) {
+            index = index - 1;
+            buffer[index] = 0;
+        }
 
     }
 
@@ -179,10 +184,11 @@ public:
             Serial.println(toAdd);
         }
 
-        for (int i = 0; i < strlen(toAdd); i++) {
+        int len = MAX(0, MIN(strlen(toAdd), SIZE - index - 1));
+        for (int i = 0; i < len; i++) {
             buffer[index + i] = toAdd[i];
         }
-        index = index + strlen(toAdd);
+        index = index + len;
         buffer[index] = 0;
     }
 
@@ -201,10 +207,11 @@ public:
             Serial.println(toAdd);
         }
 
-        for (int i = 0; i < toAdd.length(); i++) {
+        int len = MAX(0, MIN(toAdd.length(), SIZE - index - 1));
+        for (int i = 0; i < len; i++) {
             buffer[index + i] = toAdd[i];
         }
-        index = index + toAdd.length();
+        index = index + len;
         buffer[index] = 0;
     }
 
@@ -258,9 +265,12 @@ public:
 
         PGM_P p = reinterpret_cast<PGM_P>(toAdd);
 
+        int lenMax = MAX(0, SIZE - index - 1);
         while (1) {
             unsigned char c = pgm_read_byte(p++);
-            if (c == 0) break;
+            if (c == 0
+                || idx >= lenMax)
+                break;
             buffer[index + idx] = c;
             idx++;
         }
