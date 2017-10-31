@@ -1527,10 +1527,7 @@ public:
         if (command == 'c') {
 
             // Execute controller
-            String result = controllers[value](arguments);
-
-            // Send feedback to client
-            out_buffer.add(result);
+            controllers[value](out_buffer, arguments);
         }
 
         if (command == 'r' || command == 'u') {
@@ -1721,7 +1718,7 @@ public:
     }
 
 
-    void controller(char *controller_name, String (*f)(String)) {
+    void controller(char *controller_name, void (*f)(Buffer<OUTPUT_BUFFER_SIZE> &, String &)) {
 
         controllers_names[controllers_index] = controller_name;
         controllers[controllers_index] = f;
@@ -2065,7 +2062,7 @@ private:
     // Controllers array
     uint8_t controllers_index;
 
-    String (*controllers[NUMBER_CONTROLLERS])(String);
+    void (*controllers[NUMBER_CONTROLLERS])(Buffer<OUTPUT_BUFFER_SIZE> &, String &);
 
     char *controllers_names[NUMBER_CONTROLLERS];
 
