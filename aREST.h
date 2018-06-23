@@ -75,23 +75,36 @@
 #include "stdlib_noniso.h"
 #endif
 
+
+#ifdef AREST_BUFFER_SIZE
+  #define OUTPUT_BUFFER_SIZE AREST_BUFFER_SIZE
+#endif
+
 // Which board?
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(CORE_WILDFIRE) || defined(ESP8266) || defined(ESP32)
 #define NUMBER_ANALOG_PINS 16
 #define NUMBER_DIGITAL_PINS 54
+#ifndef OUTPUT_BUFFER_SIZE
 #define OUTPUT_BUFFER_SIZE 2000
+#endif
 #elif defined(__AVR_ATmega328P__) && !defined(ADAFRUIT_CC3000_H)
 #define NUMBER_ANALOG_PINS 6
 #define NUMBER_DIGITAL_PINS 14
+#ifndef OUTPUT_BUFFER_SIZE
 #define OUTPUT_BUFFER_SIZE 350
+#endif
 #elif defined(ADAFRUIT_CC3000_H)
 #define NUMBER_ANALOG_PINS 6
 #define NUMBER_DIGITAL_PINS 14
+#ifndef OUTPUT_BUFFER_SIZE
 #define OUTPUT_BUFFER_SIZE 275
+#endif
 #else
 #define NUMBER_ANALOG_PINS 6
 #define NUMBER_DIGITAL_PINS 14
+#ifndef OUTPUT_BUFFER_SIZE
 #define OUTPUT_BUFFER_SIZE 350
+#endif
 #endif
 
 // Hardware data
@@ -177,11 +190,6 @@
 #endif
 
 
-#ifdef AREST_BUFFER_SIZE
-  #define OUTPUT_BUFFER_SIZE AREST_BUFFER_SIZE
-#endif
-
-
 class aREST {
 
 private:
@@ -250,7 +258,7 @@ struct FunctionHandler: Handler {
     if (request_url.substring(header_length, header_length + 1) == "?") {
       // Standard operation --> strip off anything preceeding the first "=", pass the rest to the handler
       if(AREST_PARAMS_MODE == 0) {
-        uint16_t eq_position = request_url.indexOf('=', header_length); // Replacing 'magic number' 8 for fixed location of '='
+        int eq_position = request_url.indexOf('=', header_length); // Replacing 'magic number' 8 for fixed location of '='
         if (eq_position != -1)
           return request_url.substring(eq_position + 1, request_url.length());
       } 
@@ -466,8 +474,6 @@ void addToBufferF(const __FlashStringHelper *toAdd){
     Serial.print(F("Added to buffer as progmem: "));
     Serial.println(toAdd);
   }
-
-  uint8_t idx = 0;
 
   PGM_P p = reinterpret_cast<PGM_P>(toAdd);
 
@@ -842,7 +848,7 @@ void handle(char * string) {
 
 void handle_proto(char * string) {
   // Check if there is data available to read
-  for (int i = 0; i < strlen(string); i++){
+  for (unsigned int i = 0; i < strlen(string); i++){
 
     char c = string[i];
     answer = answer + c;
@@ -1256,7 +1262,7 @@ void process(char c) {
 void urldecode(String &request_url) {
   char a, b;
   int j = 0;
-  for(int i = 0; i < request_url.length(); i++) {
+  for(unsigned int i = 0; i < request_url.length(); i++) {
     // %20 ==> request_url[i] = '%', a = '2', b = '0'
     if ((request_url[i] == '%') && ((a = request_url[i + 1]) && (b = request_url[i + 2])) && (isxdigit(a) && isxdigit(b))) {
       if (a >= 'a') a -= 'a'-'A';
@@ -1704,7 +1710,7 @@ void addStringToBuffer(const char * toAdd, bool quotable){
     addQuote();
   }
 
-  for (int i = 0; i < strlen(toAdd) && index < OUTPUT_BUFFER_SIZE; i++, index++) {
+  for (unsigned int i = 0; i < strlen(toAdd) && index < OUTPUT_BUFFER_SIZE; i++, index++) {
     // Handle quoting quotes and backslashes
     if(quotable && (toAdd[i] == '"' || toAdd[i] == '\\')) {
       if(index == OUTPUT_BUFFER_SIZE - 1)   // No room!
