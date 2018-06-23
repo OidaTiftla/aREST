@@ -1191,7 +1191,7 @@ public:
                 }
 #endif
 
-                // Check if variable name is in float array (Mega & ESP8266 only)
+                // Check if variable name is in string array (Mega & ESP8266 only)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(CORE_WILDFIRE) || !defined(ADAFRUIT_CC3000_H) || defined(ESP32)
                 for (uint8_t i = 0; i < string_variables_index; i++) {
                     if (answer.startsWith(string_variables_names[i])) {
