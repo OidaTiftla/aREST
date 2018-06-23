@@ -345,7 +345,7 @@ void glow_led() {
     unsigned long i = millis();
     int j = i % 4096;
     if (j > 2048) { j = 4096 - j;}
-      analogWrite(status_led_pin,j/8);
+      analogWrite(status_led_pin, j/8);
     }
 }
 #endif
@@ -355,7 +355,7 @@ void addToBufferF(const __FlashStringHelper *toAdd){
   if (DEBUG_MODE) {
     #if defined(ESP8266)|| defined (ESP32)
     Serial.print("Memory loss:");
-    Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     freeMemory = ESP.getFreeHeap();
     #endif
     Serial.print(F("Added to buffer as progmem: "));
@@ -386,7 +386,7 @@ void reset_status() {
   if (DEBUG_MODE) {
     #if defined(ESP8266)|| defined (ESP32)
       Serial.print("Memory loss before reset:");
-      Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+      Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
       freeMemory = ESP.getFreeHeap();
     #endif
   }
@@ -401,7 +401,7 @@ void reset_status() {
   if (DEBUG_MODE) {
     #if defined(ESP8266)|| defined (ESP32)
     Serial.print("Memory loss after reset:");
-    Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     freeMemory = ESP.getFreeHeap();
     Serial.print("Memory free:");
     Serial.println(freeMemory, DEC);
@@ -417,10 +417,10 @@ void handle(Adafruit_CC3000_ClientRef& client) {
   if (client.available()) {
 
     // Handle request
-    handle_proto(client,true,0,false);
+    handle_proto(client, true, 0, false);
 
     // Answer
-    sendBuffer(client,32,20);
+    sendBuffer(client, 32, 20);
     client.stop();
 
     // Reset variables for the next command
@@ -444,10 +444,10 @@ void handle(YunClient& client) {
   if (client.available()) {
 
     // Handle request
-    handle_proto(client,false,0,false);
+    handle_proto(client, false, 0, false);
 
     // Answer
-    sendBuffer(client,25,10);
+    sendBuffer(client, 25, 10);
     client.stop();
 
     // Reset variables for the next command
@@ -470,10 +470,10 @@ void handle(Adafruit_BLE_UART& serial) {
   if (serial.available()) {
 
     // Handle request
-    handle_proto(serial,false,0,false);
+    handle_proto(serial, false, 0, false);
 
     // Answer
-    sendBuffer(serial,100,1);
+    sendBuffer(serial, 100, 1);
 
     // Reset variables for the next command
     reset_status();
@@ -495,10 +495,10 @@ void handle(EthernetClient& client){
   if (client.available()) {
 
     // Handle request
-    handle_proto(client,true,0,false);
+    handle_proto(client, true, 0, false);
 
     // Answer
-    sendBuffer(client,50,0);
+    sendBuffer(client, 50, 0);
     client.stop();
 
     // Reset variables for the next command
@@ -521,10 +521,10 @@ void handle(ESP8266Client& client){
   if (client.available()) {
 
     // Handle request
-    handle_proto(client,true,0,true);
+    handle_proto(client, true, 0, true);
 
     // Answer
-    sendBuffer(client,0,0);
+    sendBuffer(client, 0, 0);
     client.stop();
 
     // Reset variables for the next command
@@ -539,7 +539,7 @@ void handle(WiFiClient& client){
 
   if (DEBUG_MODE) {
     Serial.print("Memory loss before available:");
-    Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     freeMemory = ESP.getFreeHeap();
   }
 
@@ -547,21 +547,21 @@ void handle(WiFiClient& client){
 
     if (DEBUG_MODE) {
       Serial.print("Memory loss before handling:");
-      Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+      Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
       freeMemory = ESP.getFreeHeap();
     }
 
     // Handle request
-    handle_proto(client,true,0,true);
+    handle_proto(client, true, 0, true);
 
     if (DEBUG_MODE) {
       Serial.print("Memory loss after handling:");
-      Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+      Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
       freeMemory = ESP.getFreeHeap();
     }
 
     // Answer
-    sendBuffer(client,0,0);
+    sendBuffer(client, 0, 0);
     client.stop();
 
     // Reset variables for the next command
@@ -576,10 +576,10 @@ void handle(HardwareSerial& serial){
   if (serial.available()) {
 
     // Handle request
-    handle_proto(serial,false,1,false);
+    handle_proto(serial, false, 1, false);
 
     // Answer
-    sendBuffer(serial,25,1);
+    sendBuffer(serial, 25, 1);
 
     // Reset variables for the next command
     reset_status();
@@ -603,10 +603,10 @@ void handle(WiFiClient& client){
     if (DEBUG_MODE) {Serial.println("Request received");}
 
     // Handle request
-    handle_proto(client,true,0,true);
+    handle_proto(client, true, 0, true);
 
     // Answer
-    sendBuffer(client,0,0);
+    sendBuffer(client, 0, 0);
     client.stop();
 
     // Reset variables for the next command
@@ -631,10 +631,10 @@ void handle(WiFiClient& client){
     if (DEBUG_MODE) {Serial.println("Request received");}
 
     // Handle request
-    handle_proto(client,true,0,true);
+    handle_proto(client, true, 0, true);
 
     // Answer
-    sendBuffer(client,50,1);
+    sendBuffer(client, 50, 1);
     client.stop();
 
     // Reset variables for the next command
@@ -657,10 +657,10 @@ void handle(usb_serial_class& serial){
   if (serial.available()) {
 
     // Handle request
-    handle_proto(serial,false,1,false);
+    handle_proto(serial, false, 1, false);
 
     // Answer
-    sendBuffer(serial,25,1);
+    sendBuffer(serial, 25, 1);
 
     // Reset variables for the next command
     reset_status();
@@ -682,10 +682,10 @@ void handle(Serial_& serial){
   if (serial.available()) {
 
     // Handle request
-    handle_proto(serial,false,1,false);
+    handle_proto(serial, false, 1, false);
 
     // Answer
-    sendBuffer(serial,25,1);
+    sendBuffer(serial, 25, 1);
 
     // Reset variables for the next command
     reset_status();
@@ -707,10 +707,10 @@ void handle(HardwareSerial& serial){
   if (serial.available()) {
 
     // Handle request
-    handle_proto(serial,false,1,false);
+    handle_proto(serial, false, 1, false);
 
     // Answer
-    sendBuffer(serial,25,1);
+    sendBuffer(serial, 25, 1);
 
     // Reset variables for the next command
     reset_status();
@@ -954,7 +954,7 @@ void process(char c) {
   if (DEBUG_MODE) {
     // #if defined(ESP8266)|| defined (ESP32)
     // Serial.print("Memory loss:");
-    // Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    // Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     // freeMemory = ESP.getFreeHeap();
     // #endif
     Serial.println(answer);
@@ -1631,7 +1631,7 @@ void addStringToBuffer(const char * toAdd, bool quotable){
   if (DEBUG_MODE) {
     #if defined(ESP8266)|| defined (ESP32)
       Serial.print("Memory loss:");
-      Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+      Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
       freeMemory = ESP.getFreeHeap();
     #endif
     Serial.print(F("Added to buffer as char: "));
@@ -1680,7 +1680,7 @@ void addToBuffer(T(*toAdd)(), bool quotable=true) {
 //   if (DEBUG_MODE) {
 //     #if defined(ESP8266)|| defined (ESP32)
 //     Serial.print("Memory loss:");
-//     Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+//     Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
 //     freeMemory = ESP.getFreeHeap();
 //     #endif
 //     Serial.print(F("Added to buffer as progmem: "));
@@ -1712,7 +1712,7 @@ void sendBuffer(T& client, uint8_t chunkSize, uint8_t wait_time) {
   if (DEBUG_MODE) {
     #if defined(ESP8266)|| defined (ESP32)
     Serial.print("Memory loss before sending:");
-    Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     freeMemory = ESP.getFreeHeap();
     #endif
     Serial.print(F("Buffer size: "));
@@ -1756,7 +1756,7 @@ void sendBuffer(T& client, uint8_t chunkSize, uint8_t wait_time) {
   if (DEBUG_MODE) {
     #if defined(ESP8266) || defined (ESP32)
     Serial.print("Memory loss after sending:");
-    Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+    Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
     freeMemory = ESP.getFreeHeap();
     #endif
     Serial.print(F("Buffer size: "));
@@ -1769,7 +1769,7 @@ void sendBuffer(T& client, uint8_t chunkSize, uint8_t wait_time) {
     if (DEBUG_MODE) {
       #if defined(ESP8266) || defined (ESP32)
       Serial.print("Memory loss after buffer reset:");
-      Serial.println(freeMemory - ESP.getFreeHeap(),DEC);
+      Serial.println(freeMemory - ESP.getFreeHeap(), DEC);
       freeMemory = ESP.getFreeHeap();
       #endif
       Serial.print(F("Buffer size: "));
