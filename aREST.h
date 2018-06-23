@@ -1442,9 +1442,7 @@ bool send_command(bool headers, bool decodeArgs) {
   // End of message
   if (LIGHTWEIGHT) {
     addToBufferF(F("\r\n"));
-  }
-
-  else {
+  } else {
     if (command != 'r' && command != 'u') {
       addHardwareToBuffer();
       addToBufferF(F("\r\n"));
