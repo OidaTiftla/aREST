@@ -187,8 +187,6 @@ struct TypedVariable: Variable {
 
 public:
 
-public:
-
 aREST() {
   initialize();
 }
