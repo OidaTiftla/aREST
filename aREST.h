@@ -344,7 +344,9 @@ void glow_led() {
   if(status_led_pin != 255){
     unsigned long i = millis();
     int j = i % 4096;
-    if (j > 2048) { j = 4096 - j;}
+    if (j > 2048) {
+      j = 4096 - j;
+    }
       analogWrite(status_led_pin, j/8);
     }
 }
@@ -600,7 +602,9 @@ void handle(WiFiClient& client){
 
   if (client.available()) {
 
-    if (DEBUG_MODE) {Serial.println("Request received");}
+    if (DEBUG_MODE) {
+      Serial.println("Request received");
+    }
 
     // Handle request
     handle_proto(client, true, 0, true);
@@ -628,7 +632,9 @@ void handle(WiFiClient& client){
 
   if (client.available()) {
 
-    if (DEBUG_MODE) {Serial.println("Request received");}
+    if (DEBUG_MODE) {
+      Serial.println("Request received");
+    }
 
     // Handle request
     handle_proto(client, true, 0, true);
@@ -787,7 +793,9 @@ void handle_proto(T& serial, bool headers, uint8_t read_delay, bool decode)
     char c = serial.read();
     delay(read_delay);
     answer = answer + c;
-    //if (DEBUG_MODE) {Serial.print(c);}
+    //if (DEBUG_MODE) {
+    //  Serial.print(c);
+    //}
 
     // Process data
     process(c);
@@ -1157,10 +1165,10 @@ void process(char c) {
     }
 
     // Check the type of HTTP request
-    // if (answer.startsWith("GET")) {method = "GET";}
-    // if (answer.startsWith("POST")) {method = "POST";}
-    // if (answer.startsWith("PUT")) {method = "PUT";}
-    // if (answer.startsWith("DELETE")) {method = "DELETE";}
+    // if (answer.startsWith("GET")) { method = "GET"; }
+    // if (answer.startsWith("POST")) { method = "POST"; }
+    // if (answer.startsWith("PUT")) { method = "PUT"; }
+    // if (answer.startsWith("DELETE")) { method = "DELETE"; }
 
     // if (DEBUG_MODE && method != "") {
     //  Serial.print("Selected method: ");
