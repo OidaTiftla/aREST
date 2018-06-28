@@ -1189,7 +1189,7 @@ void process(char c) {
   if (command == 'u') {
 
     if (answer.endsWith(" HTTP/") || answer.endsWith("\r")) {
-      // Check if handler name is register in array
+      // Check if handler name is registered in array
       for (uint8_t i = 0; i < handlers_index; i++) {
         if (answer.startsWith(handler_names[i])) {
 
@@ -1487,8 +1487,12 @@ bool send_command(bool headers, bool decodeArgs) {
       addHandlerToBuffer(value, request_url);
     } else {
       addToBufferF(F("{"));
+      auto bufferPos = index;
       addHandlerToBuffer(value, request_url);
-      addToBufferF(F(", "));
+      if (bufferPos < index) {
+        // index has changed -> the handler added some stuff to the buffer
+        addToBufferF(F(", "));
+      }
     }
   }
 
