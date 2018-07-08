@@ -170,7 +170,6 @@ void aquariumController(aREST *arest, const String& name, const String& request_
   }
 }
 
-
 // Handles message arrived on subscribed topic(s)
 void callback(char* topic, byte* payload, unsigned int length) {
 

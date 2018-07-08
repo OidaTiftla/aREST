@@ -21,7 +21,7 @@ PubSubClient client(wifiClient);
 // Create aREST instance
 aREST rest = aREST(client);
 
-// aREST Pro key (that you can get at dashboard.arest.io)
+// aREST API key (that you can get at dashboard.arest.io)
 char * key = "your_arest_key";
 
 // WiFi parameters
@@ -44,8 +44,8 @@ void setup(void)
   // Start Serial
   Serial.begin(115200);
 
-  // Set aREST key
-  rest.setKey(key, client);
+  // Set aREST API key
+  rest.setKey(key);
 
   // Set callback
   client.setCallback(callback);
@@ -61,6 +61,9 @@ void setup(void)
 
   // API-Extension to be exposed
   rest.api_extension("aquarium", aquariumController);
+
+  // Give ID to device (optional, if not set, a device ID will be auto-assigned to the device)
+  // rest.set_id("unique_device_id");
 
   // Give name to device
   rest.set_name("mkr1000");
@@ -144,7 +147,6 @@ void aquariumController(aREST *arest, const String& name, const String& request_
     arest->addToBufferF(F("'.\""));
   }
 }
-
 
 // Handles message arrived on subscribed topic(s)
 void callback(char* topic, byte* payload, unsigned int length) {

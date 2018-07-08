@@ -85,6 +85,7 @@ int ledControl(String command) {
 
   digitalWrite(6,state);
   return 1;
+
 }
 
 void aquariumController(aREST *arest, const String& name, const String& request_url) {
