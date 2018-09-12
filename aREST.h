@@ -12,8 +12,8 @@
 
   Version 2.7.3: Added support to set your own ID when using API key
   Version 2.7.2: Bug fixes for aREST.io
-  Version 2.7.1: Additional fixes & optimisations by @eykamp 
-  Version 2.7.0: Several fixes & optimisations by @eykamp 
+  Version 2.7.1: Additional fixes & optimisations by @eykamp
+  Version 2.7.0: Several fixes & optimisations by @eykamp
   Version 2.6.0: Added support for new aREST cloud app
   Version 2.5.0: Added support for the ESP32 WiFi chip (local & cloud)
   Version 2.4.2: Added publish() support for MKR1000
@@ -229,9 +229,9 @@ struct TypedVariable: Variable {
 
   TypedVariable(T *v, bool q) : var{v} { quotable = q; }
 
-  void addToBuffer(aREST *arest) const override { 
+  void addToBuffer(aREST *arest) const override {
     arest->addToBuffer(*var, quotable);
-  }  
+  }
 };
 
 
@@ -263,7 +263,7 @@ struct FunctionHandler: Handler {
         int eq_position = request_url.indexOf('=', header_length); // Replacing 'magic number' 8 for fixed location of '='
         if (eq_position != -1)
           return request_url.substring(eq_position + 1, request_url.length());
-      } 
+      }
       // All params mode --> pass all parameters, if any, to the handler.  Handler will be resonsible for parsing
       else if(AREST_PARAMS_MODE == 1) {
         return request_url.substring(header_length + 1, request_url.length());
@@ -303,14 +303,14 @@ aREST(char* rest_remote_server, int rest_port) {
 
 
 template<typename T>
-void variable(const char *name, T *var, bool quotable) { 
+void variable(const char *name, T *var, bool quotable) {
   handlers[handlers_index] = new TypedVariable<T>(var, quotable);
   handler_names[handlers_index] = name;
   handlers_index++;
 }
 
 template<typename T>
-void variable(const char *name, T *var) { 
+void variable(const char *name, T *var) {
   variable(name, var, true);
 }
 
@@ -1464,7 +1464,7 @@ bool send_command(bool headers, bool decodeArgs) {
         addToBufferF(F(", "));
       }
     }
-    
+
     #if !defined(__AVR_ATmega32U4__)
       if (state == 'a') {
         if (!LIGHTWEIGHT) {
@@ -1640,7 +1640,7 @@ void set_id(const String& device_id) {
 
       // Build client ID
       client_id = id + String(proKey);
-      
+
   }
 
   #endif
@@ -1724,7 +1724,7 @@ void addQuote() {
   if(index < OUTPUT_BUFFER_SIZE) {
     buffer[index] = '"';
     index++;
-  }  
+  }
 }
 
 
@@ -1771,9 +1771,9 @@ void addToBuffer(T toAdd, bool quotable=false) {
 
 // Register a function instead of a plain old variable!
 template <typename T>
-void addToBuffer(T(*toAdd)(), bool quotable=true) { 
+void addToBuffer(T(*toAdd)(), bool quotable=true) {
   addToBuffer(toAdd(), quotable);
-} 
+}
 
 
 // // Add to output buffer
