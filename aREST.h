@@ -143,6 +143,14 @@
 #define AREST_PARAMS_MODE 0
 #endif
 
+
+// Use AREST_DISABLE_PORT_MODE_SETTING to control if DDR registers can be set through aREST or not.
+// Use 0 to allow setting DDR registers.
+// Use 1 to disable DDR register changes, this means you must set them on your own code.
+#ifndef AREST_DISABLE_PORT_MODE_SETTING
+#define AREST_DISABLE_PORT_MODE_SETTING 0
+#endif
+
 // Use light answer mode
 #ifndef LIGHTWEIGHT
 #define LIGHTWEIGHT 0
@@ -1341,6 +1349,12 @@ bool send_command(bool headers, bool decodeArgs) {
   // Mode selected
   if (command == 'm') {
 
+#if AREST_DISABLE_PORT_MODE_SETTING
+    // Send feedback to client
+    if (!LIGHTWEIGHT) {
+      addToBufferF(F("{\"message\": \"Mode selection is disabled on this device\", "));
+    }
+#else
     // Send feedback to client
     if (!LIGHTWEIGHT) {
       addToBufferF(F("{\"message\": \"Pin D"));
@@ -1382,6 +1396,7 @@ bool send_command(bool headers, bool decodeArgs) {
         addToBufferF(F(" set to output\", "));
       }
     }
+#endif
   }
 
   // Digital selected
