@@ -199,6 +199,9 @@
   #endif
 #endif
 
+#ifndef MAX_RECEIVE_LINE_LENGTH
+#define MAX_RECEIVE_LINE_LENGTH 60
+#endif
 
 class aREST {
 
@@ -349,6 +352,8 @@ void reset() {
   command = 'u';
   state = 'u';
   pin_selected = false;
+  answer.remove(0);
+  answer.reserve(MAX_RECEIVE_LINE_LENGTH + 1);
 }
 
 public:
@@ -536,7 +541,6 @@ void reset_status() {
   }
 
   reset();
-  answer = "";
   request_url = "";
 
   index = 0;
@@ -884,11 +888,14 @@ void handle_proto(char * string) {
   for (unsigned int i = 0; i < strlen(string); i++){
 
     char c = string[i];
-    answer = answer + c;
+    if (answer.length() < MAX_RECEIVE_LINE_LENGTH) {
+      answer.concat(c);
 
-    // Process data
-    process(c);
-
+      // Process data
+      process(c);
+    } else if (c == '\r') {
+      answer.remove(0);
+    }
   }
 
   // Send command
@@ -930,12 +937,15 @@ void handle_proto(T& serial, bool headers, uint8_t read_delay, bool decode)
     // Get the server answer
     char c = serial.read();
     delay(read_delay);
-    answer = answer + c;
-    //if (DEBUG_MODE) {Serial.print(c);}
+    if (answer.length() < MAX_RECEIVE_LINE_LENGTH) {
+      answer.concat(c);
+      // if (DEBUG_MODE) {Serial.print(c);}
 
-    // Process data
-    process(c);
-
+      // Process data
+      process(c);
+    } else if (c == '\r') {
+      answer.remove(0);
+    }
    }
 
    // Send command
@@ -1240,12 +1250,19 @@ void process(char c) {
           answer.trim();
 
           if (answer.endsWith(" HTTP/")) {
-            request_url = "/" + answer.substring(0, answer.length() - 6); // length of " HTTP/"
+            answer.remove(answer.length() - 6); // length of " HTTP/"
           } else if (answer.endsWith(" /")) {
-            request_url = "/" + answer.substring(0, answer.length() - 2); // length of " /"
-          } else {
-            request_url = "/" + answer;
+            answer.remove(answer.length() - 2); // length of " /"
           }
+          // insert '/' at beginning
+          answer.concat('#');
+          for (int ii = answer.length() - 1; ii > 0; ii--) {
+            answer[ii] = answer[ii - 1];
+          }
+          answer[0] = '/';
+
+          // copy for later
+          request_url = answer;
 
           break; // We found what we're looking for
         }
@@ -1284,11 +1301,11 @@ void process(char c) {
     //  Serial.println(method);
     // }
   } else {
-    answer = "";
+    answer.remove(0);
   }
 
   if (c == '\r' || answer.startsWith("GET /") || answer.startsWith("/")) {
-    answer = "";
+    answer.remove(0);
   }
 }
 
@@ -2072,6 +2089,12 @@ void aREST::addToBuffer(const String *toAdd, bool quotable) {
 
 template <>
 void aREST::addToBuffer(const String toAdd, bool quotable) {
+  addStringToBuffer(toAdd.c_str(), quotable);           // Strings must be quoted
+}
+
+
+template <>
+void aREST::addToBuffer(const String &toAdd, bool quotable) {
   addStringToBuffer(toAdd.c_str(), quotable);           // Strings must be quoted
 }
 
